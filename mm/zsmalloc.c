@@ -242,18 +242,9 @@ struct zs_pool {
 	struct size_class **size_class;
 	struct kmem_cache *handle_cachep;
 
-	gfp_t flags;	/* allocation flags used when growing pool */
 	atomic_long_t pages_allocated;
 
 	struct zs_pool_stats stats;
-
-	/* Compact classes */
-	struct shrinker shrinker;
-	/*
-	 * To signify that register_shrinker() was successful
-	 * and unregister_shrinker() will not Oops.
-	 */
-	bool shrinker_enabled;
 #ifdef CONFIG_ZSMALLOC_STAT
 	struct dentry *stat_dentry;
 #endif
@@ -288,13 +279,14 @@ static int create_handle_cache(struct zs_pool *pool)
 
 static void destroy_handle_cache(struct zs_pool *pool)
 {
-	kmem_cache_destroy(pool->handle_cachep);
+	if (pool->handle_cachep)
+		kmem_cache_destroy(pool->handle_cachep);
 }
 
-static unsigned long alloc_handle(struct zs_pool *pool)
+static unsigned long alloc_handle(struct zs_pool *pool, gfp_t gfp)
 {
 	return (unsigned long)kmem_cache_alloc(pool->handle_cachep,
-		pool->flags & ~__GFP_HIGHMEM);
+			gfp & ~__GFP_HIGHMEM);
 }
 
 static void free_handle(struct zs_pool *pool, unsigned long handle)
@@ -315,7 +307,12 @@ static void *zs_zpool_create(char *name, gfp_t gfp,
 			     const struct zpool_ops *zpool_ops,
 			     struct zpool *zpool)
 {
-	return zs_create_pool(name, gfp);
+	/*
+	 * Ignore global gfp flags: zs_malloc() may be invoked from
+	 * different contexts and its caller must provide a valid
+	 * gfp mask.
+	 */
+	return zs_create_pool(name);
 }
 
 static void zs_zpool_destroy(void *pool)
@@ -326,7 +323,7 @@ static void zs_zpool_destroy(void *pool)
 static int zs_zpool_malloc(void *pool, size_t size, gfp_t gfp,
 			unsigned long *handle)
 {
-	*handle = zs_malloc(pool, size);
+	*handle = zs_malloc(pool, size, gfp);
 	return *handle ? 0 : -1;
 }
 static void zs_zpool_free(void *pool, unsigned long handle)
@@ -394,7 +391,7 @@ static unsigned int get_maxobj_per_zspage(int size, int pages_per_zspage)
 /* per-cpu VM mapping areas for zspage accesses that cross page boundaries */
 static DEFINE_PER_CPU(struct mapping_area, zs_map_area);
 
-static int is_first_page(struct page *page)
+static __maybe_unused int is_first_page(struct page *page)
 {
 	return PagePrivate(page);
 }
@@ -445,19 +442,21 @@ static int get_size_class_index(int size)
 }
 
 static inline void zs_stat_inc(struct size_class *class,
-				enum zs_stat_type type, unsigned long cnt)
+				int type, unsigned long cnt)
 {
 	class->stats.objs[type] += cnt;
 }
 
+/* type can be of enum type zs_stat_type or fullness_group */
 static inline void zs_stat_dec(struct size_class *class,
-				enum zs_stat_type type, unsigned long cnt)
+				int type, unsigned long cnt)
 {
 	class->stats.objs[type] -= cnt;
 }
 
+/* type can be of enum type zs_stat_type or fullness_group */
 static inline unsigned long zs_stat_get(struct size_class *class,
-				enum zs_stat_type type)
+				int type)
 {
 	return class->stats.objs[type];
 }
@@ -643,22 +642,13 @@ static void insert_zspage(struct page *page, struct size_class *class,
 	if (fullness >= _ZS_NR_FULLNESS_GROUPS)
 		return;
 
+	head = &class->fullness_list[fullness];
+	if (*head)
+		list_add_tail(&page->lru, &(*head)->lru);
+
+	*head = page;
 	zs_stat_inc(class, fullness == ZS_ALMOST_EMPTY ?
 			CLASS_ALMOST_EMPTY : CLASS_ALMOST_FULL, 1);
-
-	head = &class->fullness_list[fullness];
-	if (!*head) {
-		*head = page;
-		return;
-	}
-
-	/*
-	 * We want to see more ZS_FULL pages and less almost
-	 * empty/full. Put pages with higher ->inuse first.
-	 */
-	list_add_tail(&page->lru, &(*head)->lru);
-	if (page->inuse >= (*head)->inuse)
-		*head = page;
 }
 
 /*
@@ -1374,7 +1364,7 @@ static unsigned long obj_malloc(struct page *first_page,
  * otherwise 0.
  * Allocation requests with size > ZS_MAX_ALLOC_SIZE will fail.
  */
-unsigned long zs_malloc(struct zs_pool *pool, size_t size)
+unsigned long zs_malloc(struct zs_pool *pool, size_t size, gfp_t gfp)
 {
 	unsigned long handle, obj;
 	struct size_class *class;
@@ -1383,7 +1373,7 @@ unsigned long zs_malloc(struct zs_pool *pool, size_t size)
 	if (unlikely(!size || size > ZS_MAX_ALLOC_SIZE))
 		return 0;
 
-	handle = alloc_handle(pool);
+	handle = alloc_handle(pool, gfp);
 	if (!handle)
 		return 0;
 
@@ -1396,7 +1386,7 @@ unsigned long zs_malloc(struct zs_pool *pool, size_t size)
 
 	if (!first_page) {
 		spin_unlock(&class->lock);
-		first_page = alloc_zspage(class, pool->flags);
+		first_page = alloc_zspage(class, gfp);
 		if (unlikely(!first_page)) {
 			free_handle(pool, handle);
 			return 0;
@@ -1691,17 +1681,11 @@ static enum fullness_group putback_zspage(struct zs_pool *pool,
 
 static struct page *isolate_source_page(struct size_class *class)
 {
-	int i;
-	struct page *page = NULL;
+	struct page *page;
 
-	for (i = ZS_ALMOST_EMPTY; i >= ZS_ALMOST_FULL; i--) {
-		page = class->fullness_list[i];
-		if (!page)
-			continue;
-
-		remove_zspage(page, class, i);
-		break;
-	}
+	page = class->fullness_list[ZS_ALMOST_EMPTY];
+	if (page)
+		remove_zspage(page, class, ZS_ALMOST_EMPTY);
 
 	return page;
 }
@@ -1710,10 +1694,15 @@ static struct page *isolate_source_page(struct size_class *class)
  *
  * Based on the number of unused allocated objects calculate
  * and return the number of pages that we can free.
+ *
+ * Should be called under class->lock.
  */
 static unsigned long zs_can_compact(struct size_class *class)
 {
 	unsigned long obj_wasted;
+
+	if (!zs_stat_get(class, CLASS_ALMOST_EMPTY))
+		return 0;
 
 	obj_wasted = zs_stat_get(class, OBJ_ALLOCATED) -
 		zs_stat_get(class, OBJ_USED);
@@ -1721,7 +1710,7 @@ static unsigned long zs_can_compact(struct size_class *class)
 	obj_wasted /= get_maxobj_per_zspage(class->size,
 			class->pages_per_zspage);
 
-	return obj_wasted * class->pages_per_zspage;
+	return obj_wasted * get_pages_per_zspage(class->size);
 }
 
 static void __zs_compact(struct zs_pool *pool, struct size_class *class)
@@ -1759,7 +1748,8 @@ static void __zs_compact(struct zs_pool *pool, struct size_class *class)
 
 		putback_zspage(pool, class, dst_page);
 		if (putback_zspage(pool, class, src_page) == ZS_EMPTY)
-			pool->stats.pages_compacted += class->pages_per_zspage;
+			pool->stats.pages_compacted +=
+				get_pages_per_zspage(class->size);
 		spin_unlock(&class->lock);
 		cond_resched();
 		spin_lock(&class->lock);
@@ -1795,67 +1785,6 @@ void zs_pool_stats(struct zs_pool *pool, struct zs_pool_stats *stats)
 }
 EXPORT_SYMBOL_GPL(zs_pool_stats);
 
-static unsigned long zs_shrinker_scan(struct shrinker *shrinker,
-		struct shrink_control *sc)
-{
-	unsigned long pages_freed;
-	struct zs_pool *pool = container_of(shrinker, struct zs_pool,
-			shrinker);
-
-	pages_freed = pool->stats.pages_compacted;
-	/*
-	 * Compact classes and calculate compaction delta.
-	 * Can run concurrently with a manually triggered
-	 * (by user) compaction.
-	 */
-	pages_freed = zs_compact(pool) - pages_freed;
-
-	return pages_freed ? pages_freed : SHRINK_STOP;
-}
-
-static unsigned long zs_shrinker_count(struct shrinker *shrinker,
-		struct shrink_control *sc)
-{
-	int i;
-	struct size_class *class;
-	unsigned long pages_to_free = 0;
-	struct zs_pool *pool = container_of(shrinker, struct zs_pool,
-			shrinker);
-
-	if (!pool->shrinker_enabled)
-		return 0;
-
-	for (i = zs_size_classes - 1; i >= 0; i--) {
-		class = pool->size_class[i];
-		if (!class)
-			continue;
-		if (class->index != i)
-			continue;
-
-		pages_to_free += zs_can_compact(class);
-	}
-
-	return pages_to_free;
-}
-
-static void zs_unregister_shrinker(struct zs_pool *pool)
-{
-	if (pool->shrinker_enabled) {
-		unregister_shrinker(&pool->shrinker);
-		pool->shrinker_enabled = false;
-	}
-}
-
-static int zs_register_shrinker(struct zs_pool *pool)
-{
-	pool->shrinker.scan_objects = zs_shrinker_scan;
-	pool->shrinker.count_objects = zs_shrinker_count;
-	pool->shrinker.batch = 0;
-	pool->shrinker.seeks = DEFAULT_SEEKS;
-
-	return register_shrinker(&pool->shrinker);
-}
-
 /**
  * zs_create_pool - Creates an allocation pool to work from.
  * @flags: allocation flags used to allocate pool metadata
@@ -1866,7 +1795,7 @@ static int zs_register_shrinker(struct zs_pool *pool)
  * On success, a pointer to the newly created pool is returned,
  * otherwise NULL.
  */
-struct zs_pool *zs_create_pool(char *name, gfp_t flags)
+struct zs_pool *zs_create_pool(char *name)
 {
 	int i;
 	struct zs_pool *pool;
@@ -1936,17 +1865,9 @@ struct zs_pool *zs_create_pool(char *name, gfp_t flags)
 		prev_class = class;
 	}
 
-	pool->flags = flags;
-
 	if (zs_pool_stat_create(name, pool))
 		goto err;
 
-	/*
-	 * Not critical, we still can use the pool
-	 * and user can trigger compaction manually.
-	 */
-	if (zs_register_shrinker(pool) == 0)
-		pool->shrinker_enabled = true;
 	return pool;
 
 err:
@@ -1959,7 +1880,6 @@ void zs_destroy_pool(struct zs_pool *pool)
 {
 	int i;
 
-	zs_unregister_shrinker(pool);
 	zs_pool_stat_destroy(pool);
 
 	for (i = 0; i < zs_size_classes; i++) {

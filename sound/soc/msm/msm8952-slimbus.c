@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,7 +54,7 @@
 
 #define WCD9XXX_MBHC_DEF_BUTTONS    8
 #define WCD9XXX_MBHC_DEF_RLOADS     5
-#define CODEC_EXT_CLK_RATE         9600000
+#define CODEC_EXT_CLK_RATE         12288000
 
 #define PRI_MI2S_ID     (1 << 0)
 #define SEC_MI2S_ID     (1 << 1)
@@ -65,7 +65,7 @@
 #define ADSP_STATE_READY_TIMEOUT_MS 50
 #define HS_STARTWORK_TIMEOUT        4000
 
-#define Q6AFE_LPASS_OSR_CLK_9_P600_MHZ	0x927C00
+#define Q6AFE_LPASS_OSR_CLK_12_P288_MHZ	0xBB8000
 #define MAX_AUX_CODECS		4
 
 #define WSA8810_NAME_1 "wsa881x.20170211"
@@ -1042,6 +1042,9 @@ static int slim0_tx_bit_format_get(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	switch (slim0_tx_bit_format) {
+	case SNDRV_PCM_FORMAT_S32_LE:
+		ucontrol->value.integer.value[0] = 3;
+		break;
 	case SNDRV_PCM_FORMAT_S24_3LE:
 		ucontrol->value.integer.value[0] = 2;
 		break;
@@ -1065,6 +1068,9 @@ static int slim0_tx_bit_format_put(struct snd_kcontrol *kcontrol,
 	int rc = 0;
 
 	switch (ucontrol->value.integer.value[0]) {
+	case 3:
+		slim0_tx_bit_format = SNDRV_PCM_FORMAT_S32_LE;
+		break;
 	case 2:
 		slim0_tx_bit_format = SNDRV_PCM_FORMAT_S24_3LE;
 		break;
@@ -1799,7 +1805,8 @@ static const char *const slim4_tx_ch_text[] = {"One", "Two", "Three", "Four",
 						"Five", "Six", "Seven",
 						"Eight"};
 static const char *const vi_feed_ch_text[] = {"One", "Two"};
-static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
+static char const *rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE",
+					"S32_LE"};
 static char const *slim0_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
 	"KHZ_192", "KHZ_44P1", "KHZ_16"};
 static char const *slim4_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",

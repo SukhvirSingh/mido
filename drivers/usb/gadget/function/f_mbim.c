@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016,2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,15 +34,6 @@
 
 #define MBIM_BULK_BUFFER_SIZE		4096
 #define MAX_CTRL_PKT_SIZE		4096
-
-enum mbim_peripheral_ep_type {
-	MBIM_DATA_EP_TYPE_RESERVED   = 0x0,
-	MBIM_DATA_EP_TYPE_HSIC       = 0x1,
-	MBIM_DATA_EP_TYPE_HSUSB      = 0x2,
-	MBIM_DATA_EP_TYPE_PCIE       = 0x3,
-	MBIM_DATA_EP_TYPE_EMBEDDED   = 0x4,
-	MBIM_DATA_EP_TYPE_BAM_DMUX   = 0x5,
-};
 
 struct mbim_peripheral_ep_info {
 	enum peripheral_ep_type	ep_type;
@@ -132,7 +123,9 @@ struct f_mbim {
 
 	atomic_t		error;
 	unsigned int		cpkt_drop_cnt;
+
 	bool			remote_wakeup_enabled;
+	struct delayed_work	rwake_work;
 };
 
 struct mbim_ntb_input_size {
@@ -667,6 +660,29 @@ static void mbim_clear_queues(struct f_mbim *mbim)
 	spin_unlock(&mbim->lock);
 }
 
+static void mbim_remote_wakeup_work(struct work_struct *w)
+{
+	struct f_mbim	*mbim = container_of(w, struct f_mbim, rwake_work.work);
+	int		ret = 0;
+
+	if ((mbim->cdev->gadget->speed == USB_SPEED_SUPER) &&
+			!mbim->function.func_is_suspended){
+		pr_debug("%s: resume in progress\n", __func__);
+		return;
+	}
+
+	if ((mbim->cdev->gadget->speed == USB_SPEED_SUPER) &&
+			mbim->function.func_is_suspended)
+		ret = usb_func_wakeup(&mbim->function);
+	else
+		ret = usb_gadget_wakeup(mbim->cdev->gadget);
+
+	if (ret == -EBUSY || ret == -EAGAIN)
+		pr_debug("%s:RW delayed due to LPM exit %d\n",  __func__, ret);
+	else
+		pr_info("%s: remote wake-up failed: %d\n", __func__, ret);
+}
+
 /*
  * Context: mbim->lock held
  */
@@ -707,7 +723,9 @@ static void mbim_do_notify(struct f_mbim *mbim)
 				req, GFP_ATOMIC);
 		spin_lock(&mbim->lock);
 		if (status) {
-			atomic_dec(&mbim->not_port.notify_count);
+			/* ignore if request already queued before bus_resume */
+			if (status != -EBUSY)
+				atomic_dec(&mbim->not_port.notify_count);
 			pr_err("Queue notify request failed, err: %d\n",
 					status);
 		}
@@ -1283,6 +1301,8 @@ static void mbim_disable(struct usb_function *f)
 	struct usb_composite_dev *cdev = mbim->cdev;
 
 	pr_info("SET DEVICE OFFLINE\n");
+
+	cancel_delayed_work(&mbim->rwake_work);
 	atomic_set(&mbim->online, 0);
 	mbim->remote_wakeup_enabled = 0;
 
@@ -1360,6 +1380,13 @@ static void mbim_suspend(struct usb_function *f)
 
 	bam_data_suspend(&mbim->bam_port, mbim->port_num, USB_FUNC_MBIM,
 			 mbim->remote_wakeup_enabled);
+
+	if (mbim->remote_wakeup_enabled &&
+			atomic_read(&mbim->not_port.notify_count) > 0) {
+		pr_info("%s: pending notification, wakeup host\n", __func__);
+		schedule_delayed_work(&mbim->rwake_work,
+				      msecs_to_jiffies(2000));
+	}
 }
 
 static void mbim_resume(struct usb_function *f)
@@ -1378,6 +1405,8 @@ static void mbim_resume(struct usb_function *f)
 	if ((mbim->cdev->gadget->speed == USB_SPEED_SUPER) &&
 		f->func_is_suspended)
 		return;
+
+	cancel_delayed_work(&mbim->rwake_work);
 
 	/* resume control path by queuing notify req */
 	spin_lock(&mbim->lock);
@@ -1746,6 +1775,7 @@ int mbim_bind_config(struct usb_configuration *c, unsigned portno,
 
 	INIT_LIST_HEAD(&mbim->cpkt_req_q);
 	INIT_LIST_HEAD(&mbim->cpkt_resp_q);
+	INIT_DELAYED_WORK(&mbim->rwake_work, mbim_remote_wakeup_work);
 
 	status = usb_add_function(c, &mbim->function);
 
@@ -1908,9 +1938,12 @@ mbim_write(struct file *fp, const char __user *buf, size_t count, loff_t *pos)
 
 	ret = usb_func_ep_queue(&dev->function, dev->not_port.notify,
 			   req, GFP_ATOMIC);
-	if (ret == -ENOTSUPP || (ret < 0 && ret != -EAGAIN)) {
+	if (ret == -ENOTSUPP || (ret < 0 && ret != -EAGAIN && ret != -EBUSY)) {
 		spin_lock_irqsave(&dev->lock, flags);
-		/* check if device disconnected while we dropped lock */
+		/*
+		 * cpkt already freed if device disconnected while we
+		 * dropped lock. Nothing to be done in that case.
+		 */
 		if (atomic_read(&dev->online)) {
 			list_del(&cpkt->list);
 			atomic_dec(&dev->not_port.notify_count);
@@ -2019,7 +2052,7 @@ static long mbim_ioctl(struct file *fp, unsigned cmd, unsigned long arg)
 			 * This channel number 8 should be in sync with
 			 * the one defined in u_bam.c.
 			 */
-			info.ph_ep_info.ep_type = MBIM_DATA_EP_TYPE_BAM_DMUX;
+			info.ph_ep_info.ep_type = DATA_EP_TYPE_BAM_DMUX;
 			info.ph_ep_info.peripheral_iface_id =
 						BAM_DMUX_CHANNEL_ID;
 			info.ipa_ep_pair.cons_pipe_num = 0;
@@ -2034,7 +2067,7 @@ static long mbim_ioctl(struct file *fp, unsigned cmd, unsigned long arg)
 				break;
 			}
 
-			info.ph_ep_info.ep_type = MBIM_DATA_EP_TYPE_HSUSB;
+			info.ph_ep_info.ep_type = DATA_EP_TYPE_HSUSB;
 			info.ph_ep_info.peripheral_iface_id = mbim->data_id;
 			info.ipa_ep_pair.cons_pipe_num = port->ipa_consumer_ep;
 			info.ipa_ep_pair.prod_pipe_num = port->ipa_producer_ep;

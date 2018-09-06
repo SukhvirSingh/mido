@@ -97,6 +97,9 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 	 * We need to tell the secondary core where to find its stack and the
 	 * page tables.
 	 */
+#ifdef CONFIG_THREAD_INFO_IN_TASK
+	secondary_data.task = idle;
+#endif
 	secondary_data.stack = task_stack_page(idle) + THREAD_START_SP;
 	__flush_dcache_area(&secondary_data, sizeof(secondary_data));
 
@@ -120,6 +123,9 @@ int __cpu_up(unsigned int cpu, struct task_struct *idle)
 		pr_err("CPU%u: failed to boot: %d\n", cpu, ret);
 	}
 
+#ifdef CONFIG_THREAD_INFO_IN_TASK
+	secondary_data.task = NULL;
+#endif
 	secondary_data.stack = NULL;
 
 	return ret;
@@ -610,15 +616,18 @@ static unsigned long backtrace_flag;
 
 static void smp_send_all_cpu_backtrace(void)
 {
-	unsigned int this_cpu = smp_processor_id();
+	unsigned int this_cpu;
 	int i;
 
-	if (test_and_set_bit(0, &backtrace_flag))
+	this_cpu = get_cpu();;
+	if (test_and_set_bit(0, &backtrace_flag)) {
 		/*
 		 * If there is already a trigger_all_cpu_backtrace() in progress
 		 * (backtrace_flag == 1), don't output double cpu dump infos.
 		 */
+		put_cpu();
 		return;
+	}
 
 	cpumask_copy(&backtrace_mask, cpu_online_mask);
 	cpu_clear(this_cpu, backtrace_mask);
@@ -630,6 +639,7 @@ static void smp_send_all_cpu_backtrace(void)
 	if (!cpus_empty(backtrace_mask))
 		smp_cross_call_common(&backtrace_mask, IPI_CPU_BACKTRACE);
 
+	put_cpu();
 	/* Wait for up to 10 seconds for all other CPUs to do the backtrace */
 	for (i = 0; i < 10 * 1000; i++) {
 		if (cpumask_empty(&backtrace_mask))

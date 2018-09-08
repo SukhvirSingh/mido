@@ -216,10 +216,8 @@ on property:persist.spectrum.profile=3 && property:init.svc.qcom-post-boot=stopp
     write /sys/devices/system/cpu/cpu7/online 1
 
     # GPU
-    
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor performance
     write /sys/class/devfreq/soc\:qcom,cpubw/governor performance
-    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 0
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 1100000000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 1100000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 1100000000

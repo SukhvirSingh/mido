@@ -48,15 +48,17 @@ on property:persist.spectrum.profile=0 && property:init.svc.qcom-post-boot=stopp
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 652800
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2496000
     write /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load 90
-    write /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay 0
+    write /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay 20000 1036800:60000
     write /sys/devices/system/cpu/cpufreq/interactive/timer_rate 20000
     write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 652800
-    write /sys/devices/system/cpu/cpufreq/interactive/timer_slack 480000
-    write /sys/devices/system/cpu/cpufreq/interactive/target_loads "85 1401600:80"
-    write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 30000
+    write /sys/devices/system/cpu/cpufreq/interactive/timer_slack 80000
+    write /sys/devices/system/cpu/cpufreq/interactive/target_loads "98 652800:56 1036800:66 1401600:74 1689600:84 1804800:83 1958400:82 2150000:84 2284000:86 2380000:85 2496000:86"
+    write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 45000
     write /sys/devices/system/cpu/cpufreq/interactive/boost 0
     write /sys/devices/system/cpu/cpufreq/interactive/align_windows 0
     write /sys/devices/system/cpu/cpufreq/interactive/max_freq_hysteresis 0
+    write /sys/devices/system/cpu/cpufreq/interactive/enable_prediction 0
+    write /sys/devices/system/cpu/cpufreq/interactive/fast_ramp_down 0
 
     write /sys/devices/system/cpu/cpu1/online 1
     write /sys/devices/system/cpu/cpu2/online 1
@@ -69,10 +71,10 @@ on property:persist.spectrum.profile=0 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
-    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 4
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 2
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
-    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 828000000
-    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 828000000
+    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 800000000
+    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 800000000
     write /sys/module/adreno_idler/parameters/adreno_idler_active Y
 
     # Storage
@@ -100,15 +102,17 @@ on property:persist.spectrum.profile=1 && property:init.svc.qcom-post-boot=stopp
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 1036800
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2611000
     write /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load 80
-    write /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay 0
+    write /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay 20000 1401600:60000
     write /sys/devices/system/cpu/cpufreq/interactive/timer_rate 40000
     write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 1036800
     write /sys/devices/system/cpu/cpufreq/interactive/timer_slack 480000
-    write /sys/devices/system/cpu/cpufreq/interactive/target_loads "85 1401600:80"
+    write /sys/devices/system/cpu/cpufreq/interactive/target_loads "98 1036800:66 1401600:74 1689600:84 1804800:83 1958400:82 2150000:84 2284000:86 2380000:85 2496000:86 2611000:86"
     write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 50000
-    write /sys/devices/system/cpu/cpufreq/interactive/boost 1
+    write /sys/devices/system/cpu/cpufreq/interactive/boost 0
     write /sys/devices/system/cpu/cpufreq/interactive/align_windows 0
     write /sys/devices/system/cpu/cpufreq/interactive/max_freq_hysteresis 0
+    write /sys/devices/system/cpu/cpufreq/interactive/enable_prediction 0
+    write /sys/devices/system/cpu/cpufreq/interactive/fast_ramp_down 1
 
     write /sys/devices/system/cpu/cpu1/online 1
     write /sys/devices/system/cpu/cpu2/online 1
@@ -121,10 +125,10 @@ on property:persist.spectrum.profile=1 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
-    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 3
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 1
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
-    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 910000000
-    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 910000000
+    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 950000000
+    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 950000000
     write /sys/module/adreno_idler/parameters/adreno_idler_active N
 
     # Storage
@@ -156,11 +160,13 @@ on property:persist.spectrum.profile=2 && property:init.svc.qcom-post-boot=stopp
     write /sys/devices/system/cpu/cpufreq/interactive/timer_rate 20000
     write /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq 652800
     write /sys/devices/system/cpu/cpufreq/interactive/timer_slack 480000
-    write /sys/devices/system/cpu/cpufreq/interactive/target_loads "85 1401600:80"
-    write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 30000
+    write /sys/devices/system/cpu/cpufreq/interactive/target_loads 98 "652800:56 1036800:66 1401600:74 1689600:84"
+    write /sys/devices/system/cpu/cpufreq/interactive/min_sample_time 45000
     write /sys/devices/system/cpu/cpufreq/interactive/boost 0
     write /sys/devices/system/cpu/cpufreq/interactive/align_windows 0
     write /sys/devices/system/cpu/cpufreq/interactive/max_freq_hysteresis 0
+    write /sys/devices/system/cpu/cpufreq/interactive/enable_prediction 0
+    write /sys/devices/system/cpu/cpufreq/interactive/fast_ramp_down 1
 
     write /sys/devices/system/cpu/cpu1/online 1
     write /sys/devices/system/cpu/cpu2/online 1
@@ -173,7 +179,7 @@ on property:persist.spectrum.profile=2 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
-    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 6
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 4
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 485000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 485000000
@@ -216,9 +222,9 @@ on property:persist.spectrum.profile=3 && property:init.svc.qcom-post-boot=stopp
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor performance
     write /sys/class/devfreq/soc\:qcom,cpubw/governor performance
     write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 0
-    write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 1055000000
-    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 1055000000
-    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 1055000000
+    write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 1100000000
+    write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 1100000000
+    write /sys/class/kgsl/kgsl-3d0/max_gpuclk 1100000000
     write /sys/module/adreno_idler/parameters/adreno_idler_active N
 
     # Storage

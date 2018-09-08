@@ -71,6 +71,7 @@ on property:persist.spectrum.profile=0 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 2
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 800000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 800000000
@@ -124,6 +125,7 @@ on property:persist.spectrum.profile=1 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 1
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 950000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 950000000
@@ -177,6 +179,7 @@ on property:persist.spectrum.profile=2 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor msm-adreno-tz
     write /sys/class/devfreq/soc\:qcom,cpubw/governor bw_hwmon
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 4
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 485000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 485000000
@@ -218,6 +221,7 @@ on property:persist.spectrum.profile=3 && property:init.svc.qcom-post-boot=stopp
     # GPU
     write /sys/class/kgsl/kgsl-3d0/devfreq/governor performance
     write /sys/class/devfreq/soc\:qcom,cpubw/governor performance
+    write /sys/class/kgsl/kgsl-3d0/default_pwrlevel 0
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 1100000000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 1100000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 1100000000

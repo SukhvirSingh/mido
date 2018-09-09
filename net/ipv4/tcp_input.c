@@ -180,12 +180,14 @@ static void tcp_incr_quickack(struct sock *sk, unsigned int max_quickacks)
 	if (quickacks == 0)
 		quickacks = 2;
 	quickacks = min(quickacks, max_quickacks);
+	if (quickacks > icsk->icsk_ack.quick)
 		icsk->icsk_ack.quick = quickacks;
 }
 
 void tcp_enter_quickack_mode(struct sock *sk, unsigned int max_quickacks)
 {
 	struct inet_connection_sock *icsk = inet_csk(sk);
+
 	tcp_incr_quickack(sk, max_quickacks);
 	icsk->icsk_ack.pingpong = 0;
 	icsk->icsk_ack.ato = TCP_ATO_MIN;
@@ -220,7 +222,7 @@ static void tcp_ecn_withdraw_cwr(struct tcp_sock *tp)
 	tp->ecn_flags &= ~TCP_ECN_DEMAND_CWR;
 }
 
- static void __tcp_ecn_check_ce(struct sock *sk, const struct sk_buff *skb)
+static void __tcp_ecn_check_ce(struct sock *sk, const struct sk_buff *skb)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 
@@ -247,6 +249,7 @@ static void tcp_ecn_withdraw_cwr(struct tcp_sock *tp)
 	default:
 		if (tcp_ca_needs_ecn(sk))
 			tcp_ca_event(sk, CA_EVENT_ECN_NO_CE);
+		tp->ecn_flags |= TCP_ECN_SEEN;
 		break;
 	}
 }

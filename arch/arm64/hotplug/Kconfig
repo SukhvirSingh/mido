@@ -1,11 +1,6 @@
-menu "Custom Hotplug drivers"
-
-config CUSTOM_HOTPLUG
-	bool "Enable custom hotplug support"
-
 config THUNDERPLUG_CONTROL
-	bool "Thunderplug"
-	depends on CUSTOM_HOTPLUG
+	bool "Thunderplug plugging down/up of cores based on load per core"
+	depends on SMP && HOTPLUG_CPU
+	default n
 	help
 	  This driver hotplugs cpu cores based on per-core load
-endmenu

@@ -1121,6 +1121,8 @@ source "net/Kconfig"
 
 source "drivers/Kconfig"
 
+source "arch/arm64/hotplug/Kconfig"
+
 source "drivers/firmware/Kconfig"
 
 source "fs/Kconfig"

@@ -5390,6 +5390,7 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 	pr_info("%s: polling enabled!\n", KBUILD_MODNAME);
 	polling_enabled = 0;
 	ret = cpufreq_register_notifier(&msm_thermal_cpufreq_notifier,
+
 			CPUFREQ_POLICY_NOTIFIER);
 	if (ret)
 		pr_err("cannot register cpufreq notifier. err:%d\n", ret);

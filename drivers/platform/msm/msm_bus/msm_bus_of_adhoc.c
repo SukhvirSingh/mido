@@ -696,10 +696,9 @@ struct msm_bus_device_node_registration
 
 	pdata->num_devices = of_get_child_count(of_node);
 
-	pdata->info = devm_kcalloc(&pdev->dev,
-			pdata->num_devices,
-			sizeof(struct msm_bus_node_device_type),
-			GFP_KERNEL);
+	pdata->info = devm_kzalloc(&pdev->dev,
+			sizeof(struct msm_bus_node_device_type) *
+			pdata->num_devices, GFP_KERNEL);
 
 	if (!pdata->info) {
 		dev_err(&pdev->dev,
@@ -815,8 +814,8 @@ int msm_bus_of_get_static_rules(struct platform_device *pdev,
 
 	of_node = pdev->dev.of_node;
 	num_rules = of_get_child_count(of_node);
-	local_rule = devm_kcalloc(&pdev->dev,
-				num_rules, sizeof(struct bus_rule_type),
+	local_rule = devm_kzalloc(&pdev->dev,
+				sizeof(struct bus_rule_type) * num_rules,
 				GFP_KERNEL);
 
 	if (IS_ERR_OR_NULL(local_rule)) {
@@ -857,8 +856,8 @@ int msm_bus_of_get_static_rules(struct platform_device *pdev,
 			int i;
 
 			local_rule[rule_idx].thresh =
-				devm_kcalloc(&pdev->dev,
-				local_rule[rule_idx].num_thresh, sizeof(u64),
+				devm_kzalloc(&pdev->dev,
+				sizeof(u64) * local_rule[rule_idx].num_thresh,
 				GFP_KERNEL);
 			if (!IS_ERR_OR_NULL(thresh_arr)) {
 				for (i = 0;

@@ -501,9 +501,8 @@ static int caam_probe(struct platform_device *pdev)
 		    of_device_is_compatible(np, "fsl,sec4.0-job-ring"))
 			rspec++;
 
-	ctrlpriv->jrpdev = devm_kcalloc(&pdev->dev,
-					rspec,
-					sizeof(struct platform_device *),
+	ctrlpriv->jrpdev = devm_kzalloc(&pdev->dev,
+					sizeof(struct platform_device *) * rspec,
 					GFP_KERNEL);
 	if (ctrlpriv->jrpdev == NULL) {
 		iounmap(&ctrl);

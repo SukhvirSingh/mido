@@ -48,8 +48,7 @@ struct coresight_platform_data *of_get_coresight_platform_data(
 		pdata->nr_outports = outports_len/sizeof(uint32_t);
 
 	if (pdata->nr_outports) {
-		pdata->outports = devm_kcalloc(dev,
-					       pdata->nr_outports,
+		pdata->outports = devm_kzalloc(dev, pdata->nr_outports *
 					       sizeof(*pdata->outports),
 					       GFP_KERNEL);
 		if (!pdata->outports)
@@ -61,8 +60,7 @@ struct coresight_platform_data *of_get_coresight_platform_data(
 		if (ret)
 			return ERR_PTR(ret);
 
-		pdata->child_ids = devm_kcalloc(dev,
-						pdata->nr_outports,
+		pdata->child_ids = devm_kzalloc(dev, pdata->nr_outports *
 						sizeof(*pdata->child_ids),
 						GFP_KERNEL);
 		if (!pdata->child_ids)
@@ -82,8 +80,7 @@ struct coresight_platform_data *of_get_coresight_platform_data(
 				return ERR_PTR(ret);
 		}
 
-		pdata->child_ports = devm_kcalloc(dev,
-						  pdata->nr_outports,
+		pdata->child_ports = devm_kzalloc(dev, pdata->nr_outports *
 						  sizeof(*pdata->child_ports),
 						  GFP_KERNEL);
 		if (!pdata->child_ports)
@@ -120,8 +117,7 @@ struct coresight_cti_data *of_get_coresight_cti_data(
 		return ERR_PTR(-EINVAL);
 
 	if (ctidata->nr_ctis) {
-		ctidata->names = devm_kcalloc(dev,
-					      ctidata->nr_ctis,
+		ctidata->names = devm_kzalloc(dev, ctidata->nr_ctis *
 					      sizeof(*ctidata->names),
 					      GFP_KERNEL);
 		if (!ctidata->names)

@@ -115,16 +115,11 @@ static struct pll_clk apcs_hf_pll = {
 	.init_test_ctl = true,
 	.test_ctl_dbg = true,
 	.masks = {
-		.pre_div_mask = BIT(12),
-		.post_div_mask = BM(9, 8),
-		.mn_en_mask = BIT(24),
 		.main_output_mask = BIT(0),
 		.early_output_mask = BIT(3),
 		.lock_mask = BIT(31),
 	},
 	.vals = {
-		.post_div_masked = 0x100,
-		.pre_div_masked = 0x0,
 		.config_ctl_val = 0x200D4828,
 		.config_ctl_hi_val = 0x006,
 		.test_ctl_hi_val = 0x00004000,
@@ -654,6 +649,7 @@ static void get_speed_bin(struct platform_device *pdev, int *bin,
 	void __iomem *base;
 	u32 pte_efuse;
 
+	// Enforce speedbin0 coz why not
 	*bin = 0;
 	*version = 0;
 
@@ -674,10 +670,6 @@ static void get_speed_bin(struct platform_device *pdev, int *bin,
 	pte_efuse = readl_relaxed(base);
 	devm_iounmap(&pdev->dev, base);
 
-	*bin = (pte_efuse >> 8) & 0x7;
-
-	dev_info(&pdev->dev, "Speed bin: %d PVS Version: %d\n", *bin,
-								*version);
 }
 
 static int cpu_parse_devicetree(struct platform_device *pdev)

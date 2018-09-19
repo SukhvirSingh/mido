@@ -18,8 +18,8 @@
 	rpm-regulator-smpa1 {
 		status = "okay";
 		pm8953_s1: regulator-s1 {
-			regulator-min-microvolt = <720000>;
-			regulator-max-microvolt = <1056000>;
+			regulator-min-microvolt = <740000>;
+			regulator-max-microvolt = <1076000>;
 			qcom,init-voltage = <1000000>;
 			status = "okay";
 		};
@@ -334,12 +334,12 @@
 			qcom,init-quiet-mode = <2>; /* Regulator EMI noise reduction */
 			regulator-name = "pm8953_s5";
 			regulator-min-microvolt = <400000>;
-			regulator-max-microvolt = <980000>; /* Use same max microvolt for our regulator */
+			regulator-max-microvolt = <990000>; /* Use same max microvolt for our regulator */
 
 			pm8953_s5_limit: avs-limit-regulator {
 				regulator-name = "pm8953_s5_avs_limit";
 				regulator-min-microvolt = <400000>;
-				regulator-max-microvolt = <980000>; /* Use same max microvolt for our regulator */
+				regulator-max-microvolt = <990000>; /* Use same max microvolt for our regulator */
 			};
 		};
 	};
@@ -445,7 +445,7 @@
 				<926000>,
 				<944000>,
 				<962000>,
-				<980000>;
+				<990000>;
 
 				qcom,cpr-voltage-floor =
 				/* Global speed bin */
@@ -477,7 +477,7 @@
 				 /*default is 4 "1"*/
 
 				qcom,corner-frequencies =
-					< 372800 >,
+					< 373028 >,
 					< 652800 >,
 					< 1036800 >,
 					< 1401600 >,
@@ -487,10 +487,10 @@
 					< 2016000 >,
 					< 2150400 >,
 					< 2208000 >,
-					< 2316000 >,
-					< 2438000 >,
-					< 2534000 >,
-					< 2649000 >,
+					< 2323200 >,
+					< 2438400 >,
+					< 2534400 >,
+					< 2649600 >,
 					< 2767000 >;
 
 				qcom,cpr-open-loop-voltage-fuse-adjustment =

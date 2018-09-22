@@ -55,7 +55,7 @@
 #define TRACE_MSM_THERMAL
 #include <trace/trace_thermal.h>
 
-#define MAX_CURRENT_UA 100000
+#define MAX_CURRENT_UA 200000
 #define MAX_RAILS 5
 #define TSENS_NAME_FORMAT "tsens_tz_sensor%d"
 #define THERM_SECURE_BITE_CMD 8
@@ -5390,7 +5390,6 @@ int msm_thermal_init(struct msm_thermal_data *pdata)
 	pr_info("%s: polling enabled!\n", KBUILD_MODNAME);
 	polling_enabled = 0;
 	ret = cpufreq_register_notifier(&msm_thermal_cpufreq_notifier,
-
 			CPUFREQ_POLICY_NOTIFIER);
 	if (ret)
 		pr_err("cannot register cpufreq notifier. err:%d\n", ret);

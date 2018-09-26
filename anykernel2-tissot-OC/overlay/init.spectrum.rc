@@ -74,7 +74,7 @@ on property:persist.spectrum.profile=0 && property:init.svc.qcom-post-boot=stopp
     write /sys/class/kgsl/kgsl-3d0/devfreq/min_freq 133330000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 800000000
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 800000000
-    write /sys/module/adreno_idler/parameters/adreno_idler_active N
+    write /sys/module/adreno_idler/parameters/adreno_idler_active Y
 
     # Storage
     write /sys/block/mmcblk0/queue/scheduler cfq
@@ -87,7 +87,7 @@ on property:persist.spectrum.profile=0 && property:init.svc.qcom-post-boot=stopp
     write /sys/module/workqueue/parameters/power_efficient Y
 
     # Fsync
-    write /sys/module/sync/parameters/fsync_enabled Y
+    write /sys/module/sync/parameters/fsync_enabled N
 
     # I/O Statics
     write /sys/block/mmcblk0/queue/iostats 1

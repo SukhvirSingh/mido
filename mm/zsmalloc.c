@@ -242,10 +242,10 @@ struct zs_pool {
 	struct size_class **size_class;
 	struct kmem_cache *handle_cachep;
 
+	gfp_t flags;	/* allocation flags used when growing pool */
 	atomic_long_t pages_allocated;
 
 	struct zs_pool_stats stats;
-<<<<<<< HEAD
 
 	/* Compact classes */
 	struct shrinker shrinker;
@@ -254,8 +254,6 @@ struct zs_pool {
 	 * and unregister_shrinker() will not Oops.
 	 */
 	bool shrinker_enabled;
-=======
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
 #ifdef CONFIG_ZSMALLOC_STAT
 	struct dentry *stat_dentry;
 #endif
@@ -293,10 +291,10 @@ static void destroy_handle_cache(struct zs_pool *pool)
 	kmem_cache_destroy(pool->handle_cachep);
 }
 
-static unsigned long alloc_handle(struct zs_pool *pool, gfp_t gfp)
+static unsigned long alloc_handle(struct zs_pool *pool)
 {
 	return (unsigned long)kmem_cache_alloc(pool->handle_cachep,
-			gfp & ~__GFP_HIGHMEM);
+		pool->flags & ~__GFP_HIGHMEM);
 }
 
 static void free_handle(struct zs_pool *pool, unsigned long handle)
@@ -317,12 +315,7 @@ static void *zs_zpool_create(char *name, gfp_t gfp,
 			     const struct zpool_ops *zpool_ops,
 			     struct zpool *zpool)
 {
-	/*
-	 * Ignore global gfp flags: zs_malloc() may be invoked from
-	 * different contexts and its caller must provide a valid
-	 * gfp mask.
-	 */
-	return zs_create_pool(name);
+	return zs_create_pool(name, gfp);
 }
 
 static void zs_zpool_destroy(void *pool)
@@ -333,7 +326,7 @@ static void zs_zpool_destroy(void *pool)
 static int zs_zpool_malloc(void *pool, size_t size, gfp_t gfp,
 			unsigned long *handle)
 {
-	*handle = zs_malloc(pool, size, gfp);
+	*handle = zs_malloc(pool, size);
 	return *handle ? 0 : -1;
 }
 static void zs_zpool_free(void *pool, unsigned long handle)
@@ -1381,7 +1374,7 @@ static unsigned long obj_malloc(struct page *first_page,
  * otherwise 0.
  * Allocation requests with size > ZS_MAX_ALLOC_SIZE will fail.
  */
-unsigned long zs_malloc(struct zs_pool *pool, size_t size, gfp_t gfp)
+unsigned long zs_malloc(struct zs_pool *pool, size_t size)
 {
 	unsigned long handle, obj;
 	struct size_class *class;
@@ -1390,7 +1383,7 @@ unsigned long zs_malloc(struct zs_pool *pool, size_t size, gfp_t gfp)
 	if (unlikely(!size || size > ZS_MAX_ALLOC_SIZE))
 		return 0;
 
-	handle = alloc_handle(pool, gfp);
+	handle = alloc_handle(pool);
 	if (!handle)
 		return 0;
 
@@ -1403,7 +1396,7 @@ unsigned long zs_malloc(struct zs_pool *pool, size_t size, gfp_t gfp)
 
 	if (!first_page) {
 		spin_unlock(&class->lock);
-		first_page = alloc_zspage(class, gfp);
+		first_page = alloc_zspage(class, pool->flags);
 		if (unlikely(!first_page)) {
 			free_handle(pool, handle);
 			return 0;
@@ -1717,33 +1710,18 @@ static struct page *isolate_source_page(struct size_class *class)
  *
  * Based on the number of unused allocated objects calculate
  * and return the number of pages that we can free.
-<<<<<<< HEAD
-=======
- *
- * Should be called under class->lock.
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
  */
 static unsigned long zs_can_compact(struct size_class *class)
 {
 	unsigned long obj_wasted;
 
-<<<<<<< HEAD
-=======
-	if (!zs_stat_get(class, CLASS_ALMOST_EMPTY))
-		return 0;
-
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
 	obj_wasted = zs_stat_get(class, OBJ_ALLOCATED) -
 		zs_stat_get(class, OBJ_USED);
 
 	obj_wasted /= get_maxobj_per_zspage(class->size,
 			class->pages_per_zspage);
 
-<<<<<<< HEAD
 	return obj_wasted * class->pages_per_zspage;
-=======
-	return obj_wasted * get_pages_per_zspage(class->size);
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
 }
 
 static void __zs_compact(struct zs_pool *pool, struct size_class *class)
@@ -1781,12 +1759,7 @@ static void __zs_compact(struct zs_pool *pool, struct size_class *class)
 
 		putback_zspage(pool, class, dst_page);
 		if (putback_zspage(pool, class, src_page) == ZS_EMPTY)
-<<<<<<< HEAD
 			pool->stats.pages_compacted += class->pages_per_zspage;
-=======
-			pool->stats.pages_compacted +=
-				get_pages_per_zspage(class->size);
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
 		spin_unlock(&class->lock);
 		cond_resched();
 		spin_lock(&class->lock);
@@ -1822,7 +1795,6 @@ void zs_pool_stats(struct zs_pool *pool, struct zs_pool_stats *stats)
 }
 EXPORT_SYMBOL_GPL(zs_pool_stats);
 
-<<<<<<< HEAD
 static unsigned long zs_shrinker_scan(struct shrinker *shrinker,
 		struct shrink_control *sc)
 {
@@ -1884,8 +1856,6 @@ static int zs_register_shrinker(struct zs_pool *pool)
 	return register_shrinker(&pool->shrinker);
 }
 
-=======
->>>>>>> 963d89f91bbf... zram: user per-cpu compression streams
 /**
  * zs_create_pool - Creates an allocation pool to work from.
  * @flags: allocation flags used to allocate pool metadata
@@ -1896,7 +1866,7 @@ static int zs_register_shrinker(struct zs_pool *pool)
  * On success, a pointer to the newly created pool is returned,
  * otherwise NULL.
  */
-struct zs_pool *zs_create_pool(char *name)
+struct zs_pool *zs_create_pool(char *name, gfp_t flags)
 {
 	int i;
 	struct zs_pool *pool;
@@ -1965,6 +1935,8 @@ struct zs_pool *zs_create_pool(char *name)
 
 		prev_class = class;
 	}
+
+	pool->flags = flags;
 
 	if (zs_pool_stat_create(name, pool))
 		goto err;

@@ -18,8 +18,8 @@
 	rpm-regulator-smpa1 {
 		status = "okay";
 		pm8953_s1: regulator-s1 {
-			regulator-min-microvolt = <795000>;
-			regulator-max-microvolt = <1081000>;
+			regulator-min-microvolt = <785000>;
+			regulator-max-microvolt = <1071000>;
 			qcom,init-voltage = <1000000>;
 			status = "okay";
 		};
@@ -431,7 +431,7 @@
 
 				qcom,cpr-voltage-ceiling =
 				/* Global speed bin */
-				<565000>, /* FOR TESTING PURPOSES ONLY */
+				<640000>, /* FOR TESTING PURPOSES ONLY */
 				<640000>,
 				<685000>,
 				<710000>,

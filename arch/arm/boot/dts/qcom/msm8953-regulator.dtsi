@@ -27,12 +27,6 @@
 
 	/* PM8953 S2 - VDD_CX supply */
 	rpm-regulator-smpa2 {
-		qcom,gx-retention; /* Enable regulator retention level for IDLE modes */
-		qcom,soft-start-enable = <1>; /* Enable soft start to start without current peaks that can damage device */
-		qcom,hpm-enable = <1>; /* Enable high power mode */
-		qcom,boost-current-limit = <14>; /* 3200mA maximum */
-		qcom,ocp-enable = <1>; /* Enable over current protection */
-		qcom,init-quiet-mode = <2>; /* Regulator EMI noise reduction */
 		status = "okay";
 		pm8953_s2_level: regulator-s2-level {
 			compatible = "qcom,rpm-smd-regulator";
@@ -93,7 +87,6 @@
 		pm8953_s4: regulator-s4 {
 			regulator-min-microvolt = <1900000>;
 			regulator-max-microvolt = <2050000>;
-			qcom,init-quiet-mode = <2>; /* Regulator EMI noise reduction */
 			qcom,init-voltage = <1900000>;
 			status = "okay";
 		};
@@ -206,7 +199,7 @@
 			regulator-name = "pm8953_l7_ao";
 			qcom,set = <1>;
 			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <2000000>;
+			regulator-max-microvolt = <1900000>;
 			qcom,init-voltage = <1800000>;
 		};
 	};
@@ -314,9 +307,9 @@
 	rpm-regulator-ldoa23 {
 		status = "okay";
 		pm8953_l23: regulator-l23 {
-			regulator-min-microvolt = <975000>;
+			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1225000>;
-			qcom,init-voltage = <975000>;
+			qcom,init-voltage = <1200000>;
 			status = "okay";
 		};
 	};
@@ -328,10 +321,6 @@
 		pm8953_s5: spm-regulator@2000 {
 			compatible = "qcom,spm-regulator";
 			reg = <0x2000 0x100>;
-			qcom,ocp-enable = <0>;
-			qcom,auto-mode-enable = <0>;
-			qcom,hpm-enable = <1>;
-			qcom,init-quiet-mode = <2>; /* Regulator EMI noise reduction */
 			regulator-name = "pm8953_s5";
 			regulator-min-microvolt = <400000>;
 			regulator-max-microvolt = <1140000>;
@@ -379,8 +368,6 @@
 		qcom,cpr-count-repeat = <14>;
 		qcom,cpr-down-error-step-limit = <1>;
 		qcom,cpr-up-error-step-limit = <1>;
-		qcom,cpr-reset-step-quot-loop-en;
-		qcom,cpr-thread-has-always-vote-en;
 
 		qcom,apm-ctrl = <&apc_apm>;
 		qcom,apm-threshold-voltage = <850000>;
@@ -393,6 +380,13 @@
 
 		qcom,cpr-enable;
 		qcom,cpr-hw-closed-loop;
+
+		qcom,cpr-panic-reg-addr-list =
+			<0xb1d2c18 0xb1d2900 0x0b1112b0 0xb018798>;
+		qcom,cpr-panic-reg-name-list =
+			"CCI_SAW4_PMIC_STS", "CCI_SAW4_VCTL",
+			"APCS_ALIAS0_APM_CTLER_STATUS",
+			"APCS0_CPR_CORE_ADJ_MODE_REG";
 
 		qcom,cpr-temp-point-map = <250 650 850>;
 		qcom,cpr-initial-temp-band = <0>;
@@ -479,19 +473,19 @@
 				qcom,corner-frequencies =
 					< 373028 >,
 					< 652800 >,
-					< 1036800 >,
-					< 1401600 >,
+					< 825000 >,
+					< 1056000 >,
+					< 1209000 >,
+					< 1363000 >,
+					< 1536000 >,
 					< 1689600 >,
-					< 1843200 >,
-					< 1958400 >,
-					< 2016000 >,
-					< 2150400 >,
-					< 2208000 >,
-					< 2323200 >,
-					< 2438400 >,
-					< 2534400 >,
+					< 1996000 >,
+					< 2169000 >,
+					< 2246000 >,
+					< 2400000 >,
+					< 2553000 >,
 					< 2649600 >,
-					< 2767000 >;
+					< 2803000 >;
 
 				qcom,cpr-open-loop-voltage-fuse-adjustment =
 				/* Speed bin 0; CPR rev 0..7 */

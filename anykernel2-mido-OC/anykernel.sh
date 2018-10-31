@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() {
-kernel.string=eXtremeKernel V11 by X-Team
+kernel.string=eXtremeKernel V12 by X-Team
 do.devicecheck=1
 do.modules=0
 do.cleanup=1
